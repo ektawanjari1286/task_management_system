@@ -1,0 +1,15 @@
+Task Management System update
+
+Changes:
+- Student deletion now archives projects (soft delete) instead of removing the project, tasks, and feedback.
+- Archived projects are hidden from the student's active dashboard but remain visible in teacher and administrator project history.
+- Teacher can search/filter active and archived projects.
+- Administrator has a searchable/filterable project history table.
+- Existing SQLite databases are upgraded automatically at startup by adding project.deleted_at if missing.
+- requirements.txt is UTF-8 and includes openpyxl and reportlab, both imported by app.py.
+
+Run from this folder:
+  python -m pip install -r requirements.txt
+  python app.py
+
+Backup your instance folder/database before first run. The app keeps existing records; it does not restore projects that were permanently deleted before this update.

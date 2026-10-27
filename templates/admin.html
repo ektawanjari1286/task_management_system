@@ -1,0 +1,255 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | TaskFlow</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f5fb;
+            color: #202945;
+        }
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: 230px;
+            background: #18213e;
+            color: white;
+            padding: 28px 18px;
+        }
+        .brand { font-size: 24px; font-weight: bold; margin-bottom: 38px; }
+        .nav {
+            display: block;
+            color: #dce4ff;
+            padding: 14px;
+            margin: 8px 0;
+            text-decoration: none;
+            border-radius: 9px;
+        }
+        .nav:hover, .active { background: #40538c; color: white; }
+        main { margin-left: 230px; padding: 32px; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        h1 { margin: 0 0 8px; font-size: 28px; }
+        .muted { color: #7a8399; }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+        .card, .panel {
+            background: white;
+            border-radius: 16px;
+            padding: 23px;
+            box-shadow: 0 5px 22px rgba(31, 45, 80, .06);
+        }
+        .number { font-size: 32px; font-weight: bold; margin-top: 15px; }
+        .panel { margin-bottom: 24px; overflow-x: auto; }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dce1ee;
+            border-radius: 8px;
+            margin: 7px 0 14px;
+        }
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 12px 18px;
+            background: #5369e8;
+            color: white;
+            cursor: pointer;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+        th, td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #edf0f6;
+            text-align: left;
+        }
+        th { color: #778198; font-size: 13px; }
+        .pill {
+            background: #e9edff;
+            color: #4358d7;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .flash { padding: 12px; background: #e8f5e9; border-radius: 8px; margin-bottom: 12px; }
+        .history-tools { display:flex; gap:12px; flex-wrap:wrap; margin:14px 0; }
+        .history-tools input, .history-tools select { flex:1; min-width:180px; padding:12px; border:1px solid #dce1ee; border-radius:9px; font:inherit; }
+        .status-pill { display:inline-block; padding:6px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+        .status-active { color:#176b43; background:#e2f7eb; } .status-deleted { color:#8a5700; background:#fff0ce; }
+        .history-row[hidden] { display:none; }
+        .card { transition:transform .18s ease, box-shadow .18s ease; } .card:hover { transform:translateY(-3px); box-shadow:0 12px 26px rgba(31,45,80,.1); }
+        @media(max-width:650px) {
+            .sidebar { position: static; width: 100%; }
+            .brand { margin-bottom: 16px; }
+            main { margin: 0; padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">✦ TaskFlow</div>
+        <a class="nav active" href="{{ url_for('admin_dashboard') }}">▦ Overview</a>
+        <a class="nav" href="#create-user">＋ Add User</a>
+        <a class="nav" href="#users">♙ User Management</a>
+        <a class="nav" href="#project-history">▤ Project History</a>
+        <a class="nav" href="{{ url_for('logout') }}">↪ Logout</a>
+    </aside>
+
+    <main>
+        <header class="header">
+            <div>
+                <h1>Administrator Dashboard</h1>
+                <div class="muted">Manage users and monitor academic projects.</div>
+            </div>
+            <div>Welcome, {{ session.get('user_name', 'Admin') }}</div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="flash">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <section class="cards">
+            <div class="card">
+                <div class="muted">Total Users</div>
+                <div class="number">{{ total_users }}</div>
+            </div>
+            <div class="card">
+                <div class="muted">Students</div>
+                <div class="number">{{ total_students }}</div>
+            </div>
+            <div class="card">
+                <div class="muted">Teachers</div>
+                <div class="number">{{ total_teachers }}</div>
+            </div>
+            <div class="card">
+                <div class="muted">Projects</div>
+                <div class="number">{{ total_projects }}</div>
+            </div>
+            <div class="card">
+                <div class="muted">Total Tasks</div>
+                <div class="number">{{ total_tasks }}</div>
+            </div>
+            <div class="card">
+                <div class="muted">Completed Tasks</div>
+                <div class="number">{{ completed_tasks }}</div>
+            </div>
+        </section>
+
+        <section class="panel" id="create-user">
+            <h2>Create Student / Teacher Account</h2>
+            <p class="muted">New accounts can sign in using the credentials you provide.</p>
+
+            <form method="POST" action="{{ url_for('admin_create_user') }}">
+                <label>Full name</label>
+                <input type="text" name="name" required>
+
+                <label>Email address</label>
+                <input type="email" name="email" required>
+
+                <label>Temporary password (minimum 8 characters)</label>
+                <input type="password" name="password" minlength="8" required>
+
+                <label>Account role</label>
+                <select name="role" required>
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                </select>
+
+                <button type="submit">Create Account</button>
+            </form>
+        </section>
+
+        <section class="panel" id="project-history">
+            <h2>Project History</h2>
+            <p class="muted">All student projects, including those archived by students. Archived records retain their tasks and feedback.</p>
+            <div class="history-tools">
+                <input id="adminProjectSearch" type="search" placeholder="Search student, project, subject or topic…" aria-label="Search project history">
+                <select id="adminProjectStatus" aria-label="Filter project status"><option value="all">All projects</option><option value="active">Active only</option><option value="deleted">Deleted only</option></select>
+            </div>
+            <div class="muted" id="historyCount" aria-live="polite"></div>
+            <table id="projectHistoryTable">
+                <thead><tr><th>Student</th><th>Project</th><th>Subject / Topic</th><th>Deadline</th><th>Tasks</th><th>Status</th><th>Deleted On</th></tr></thead>
+                <tbody>
+                {% for project in projects %}
+                    <tr class="history-row" data-status="{% if project.deleted_at %}deleted{% else %}active{% endif %}" data-search="{{ (project.student.name ~ ' ' ~ project.student.email ~ ' ' ~ project.title ~ ' ' ~ project.subject ~ ' ' ~ project.topic)|lower }}">
+                        <td>{{ project.student.name }}<br><small class="muted">{{ project.student.email }}</small></td>
+                        <td><strong>{{ project.title }}</strong></td>
+                        <td>{{ project.subject }}<br><small class="muted">{{ project.topic }}</small></td>
+                        <td>{{ project.deadline.strftime('%d %b %Y') }}</td>
+                        <td>{{ project.tasks|length }}</td>
+                        <td>{% if project.deleted_at %}<span class="status-pill status-deleted">Deleted / Archived</span>{% else %}<span class="status-pill status-active">Active</span>{% endif %}</td>
+                        <td>{% if project.deleted_at %}{{ project.deleted_at.strftime('%d %b %Y, %I:%M %p') }}{% else %}—{% endif %}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7">No projects have been created yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="panel" id="users">
+            <h2>User Management</h2>
+            <p class="muted">All registered accounts and their roles.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.email }}</td>
+                        <td><span class="pill">{{ user.role|capitalize }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4">No users found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+    <script>
+    (() => {
+      const search = document.getElementById('adminProjectSearch');
+      const status = document.getElementById('adminProjectStatus');
+      const rows = [...document.querySelectorAll('.history-row')];
+      const count = document.getElementById('historyCount');
+      function filterRows() {
+        const q = (search.value || '').trim().toLowerCase(); let shown = 0;
+        rows.forEach(row => {
+          const okText = !q || (row.dataset.search || '').includes(q);
+          const okStatus = status.value === 'all' || row.dataset.status === status.value;
+          row.hidden = !(okText && okStatus); if (!row.hidden) shown++;
+        });
+        count.textContent = `Showing ${shown} of ${rows.length} projects`;
+      }
+      search.addEventListener('input', filterRows); status.addEventListener('change', filterRows); filterRows();
+    })();
+    </script>
+</body>
+</html>

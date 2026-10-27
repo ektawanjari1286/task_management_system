@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <!-- HEADER -->
+    <div class="dashboard-header">
+
+        <div>
+            <h1>My Task Dashboard 📋</h1>
+            <p>Plan, track and complete your work</p>
+        </div>
+
+        <div class="dashboard-links">
+            <a href="{{ url_for('tasks.history') }}">📜 History</a>
+            <a href="{{ url_for('tasks.reports') }}">📊 Reports</a>
+        </div>
+
+    </div>
+
+
+    <!-- STATISTICS -->
+    <div class="stats">
+
+        <div class="stat-card">
+            <span>Total Tasks</span>
+            <strong>{{ total_tasks }}</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Completed</span>
+            <strong>{{ completed_tasks }}</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Pending</span>
+            <strong>{{ pending_tasks }}</strong>
+        </div>
+
+    </div>
+
+
+    <!-- ADD TASK -->
+    <div class="add-task-card">
+
+        <h2>➕ Create New Task</h2>
+
+        <form
+            method="POST"
+            action="{{ url_for('tasks.add_task') }}"
+        >
+
+            <div class="form-group">
+
+                <label>Task Title</label>
+
+                <input
+                    type="text"
+                    name="title"
+                    placeholder="Enter task title"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>Description</label>
+
+                <textarea
+                    name="description"
+                    placeholder="Describe your task..."
+                ></textarea>
+
+            </div>
+
+
+            <div class="form-row">
+
+                <div class="form-group">
+
+                    <label>Priority</label>
+
+                    <select name="priority">
+
+                        <option value="Low">
+                            Low
+                        </option>
+
+                        <option value="Medium" selected>
+                            Medium
+                        </option>
+
+                        <option value="High">
+                            High
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>Deadline</label>
+
+                    <input
+                        type="date"
+                        name="deadline"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <button type="submit" class="primary-btn">
+                Create Task
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <!-- TASK LIST -->
+    <div class="task-section">
+
+        <div class="section-title">
+
+            <h2>My Tasks</h2>
+
+            <input
+                type="text"
+                id="taskSearch"
+                placeholder="🔍 Search tasks..."
+                onkeyup="searchTasks()"
+            >
+
+        </div>
+
+
+        {% if tasks %}
+
+            <div id="taskList">
+
+                {% for task in tasks %}
+
+                <div
+                    class="task-card"
+                    data-title="{{ task.title|lower }}"
+                >
+
+                    <!-- TASK INFORMATION -->
+                    <div class="task-main">
+
+                        <div class="task-title-row">
+
+                            <h3>
+                                {{ task.title }}
+                            </h3>
+
+                            {% if task.priority == "High" %}
+
+                                <span class="priority high">
+                                    HIGH
+                                </span>
+
+                            {% elif task.priority == "Medium" %}
+
+                                <span class="priority medium">
+                                    MEDIUM
+                                </span>
+
+                            {% else %}
+
+                                <span class="priority low">
+                                    LOW
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        {% if task.description %}
+
+                        <p class="description">
+                            {{ task.description }}
+                        </p>
+
+                        {% endif %}
+
+
+                        <!-- STATUS -->
+                        <div class="task-meta">
+
+                            <span>
+                                Status:
+                                <b>{{ task.status }}</b>
+                            </span>
+
+                            {% if task.deadline %}
+
+                            <span>
+                                📅 Deadline:
+                                <b>{{ task.deadline }}</b>
+                            </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- PROGRESS -->
+                        {% set total_steps = task.subtasks|length %}
+
+                        {% set completed_steps =
+                            task.subtasks
+                            |selectattr("completed")
+                            |list
+                            |length
+                        %}
+
+
+                        {% if total_steps > 0 %}
+
+                            {% set progress =
+                                ((completed_steps / total_steps) * 100)
+                                |round
+                                |int
+                            %}
+
+                        {% else %}
+
+                            {% if task.completed %}
+                                {% set progress = 100 %}
+                            {% else %}
+                                {% set progress = 0 %}
+                            {% endif %}
+
+                        {% endif %}
+
+
+                        <div class="progress-area">
+
+                            <div class="progress-header">
+
+                                <span>
+                                    Progress
+                                </span>
+
+                                <b>
+                                    {{ progress }}%
+                                </b>
+
+                            </div>
+
+                            <div class="progress-bar">
+
+                                <div
+                                    class="progress-fill"
+                                    style="width: {{ progress }}%"
+                                ></div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ACTIONS -->
+                        <div class="task-actions">
+
+                            <a
+                                href="{{ url_for(
+                                    'tasks.task_detail',
+                                    task_id=task.id
+                                ) }}"
+                                class="view-btn"
+                            >
+                                View Steps
+                            </a>
+
+
+                            <a
+                                href="{{ url_for(
+                                    'tasks.complete_task',
+                                    task_id=task.id
+                                ) }}"
+                                class="complete-btn"
+                            >
+
+                                {% if task.completed %}
+                                    Undo
+                                {% else %}
+                                    Complete
+                                {% endif %}
+
+                            </a>
+
+
+                            <a
+                                href="{{ url_for(
+                                    'tasks.delete_task',
+                                    task_id=task.id
+                                ) }}"
+                                class="delete-btn"
+                                onclick="return confirm(
+                                    'Delete this task?'
+                                );"
+                            >
+                                Delete
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        {% else %}
+
+            <div class="empty">
+
+                <div class="empty-icon">
+                    📝
+                </div>
+
+                <h2>No Tasks Yet</h2>
+
+                <p>
+                    Create your first task above.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<script>
+
+function searchTasks() {
+
+    const search =
+        document
+        .getElementById("taskSearch")
+        .value
+        .toLowerCase();
+
+    const tasks =
+        document
+        .querySelectorAll(".task-card");
+
+    tasks.forEach(function(task) {
+
+        const title =
+            task.dataset.title;
+
+        if (title.includes(search)) {
+
+            task.style.display = "block";
+
+        } else {
+
+            task.style.display = "none";
+
+        }
+
+    });
+
+}
+
+</script>
+
+{% endblock %}
